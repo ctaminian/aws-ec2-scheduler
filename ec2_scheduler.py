@@ -1,10 +1,17 @@
 import os
+import boto3
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
+# Retrieve AWS credentials, region and ec2 instance id from environment variables
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWSA_REGION = os.getenv("AWS_DEFAULT_REGION")
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.getenv("AWS_DEFAULT_REGION")
+EC2_INSTANCE_ID = os.getenv("EC2_INSTANCE_ID")
 
-print("AWS Keys Loaded Successfully")
+# Create an EC2 client and describe the instance
+ec2 = boto3.client("ec2", aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY, region_name=AWS_REGION)
+response = ec2.describe_instances(InstanceIds=[EC2_INSTANCE_ID])
+print(f"{response}")

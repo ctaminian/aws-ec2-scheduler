@@ -47,10 +47,14 @@ def run_main_menu():
 # Function to start the EC2 instance
 def start_instance():
     print("Starting EC2 instance...\n")
+    ec2.start_instances(InstanceIds=[EC2_INSTANCE_ID])
+    print("EC2 instance started successfully\n")
 
 # Function to stop the EC2 instance
 def stop_instance():
     print("Stopping EC2 instance...\n")
+    ec2.stop_instances(InstanceIds=[EC2_INSTANCE_ID])
+    print("EC2 instance stopped successfully\n")
 
 # Function to describe the EC2 instance
 def describe_instance():

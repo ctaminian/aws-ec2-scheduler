@@ -1,5 +1,7 @@
 import os
 import boto3
+import time
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -17,32 +19,32 @@ print("EC2 client created successfully\n")
 
 def main():
 
-    # Run the main menu in a loop
-    while True:
-        run_main_menu()
+    # Get start and stop times from the user
+    start_time, stop_time = get_start_and_stop_times()
+    print(f"✅ Start time: {start_time.strftime('%H:%M:%S')}, Stop time: {stop_time.strftime('%H:%M:%S')}")
 
 # Function to display the main menu and handle user input
-def run_main_menu():
+def get_start_and_stop_times():
     print("Welcome to the EC2 Scheduler!")
-    print("1. Start EC2 Instance")
-    print("2. Stop EC2 Instance")
-    print("3. Describe EC2 Instance")
-    print("4. Exit")
+    print("Please enter the start and stop times for the EC2 instance (in HH:MM:SS format)")
+    
+    while True:
+        try:
+            start_time_str = input("Start time: ")
+            stop_time_str = input("Stop time: ")
 
-    choice = input("Enter your choice: ")
+            now = datetime.now()
+            start_time = datetime.strptime(start_time_str, "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day)
+            stop_time = datetime.strptime(stop_time_str, "%H:%M:%S").replace(year=now.year, month=now.month, day=now.day)
 
-    if choice == "1":
-        start_instance()
-    elif choice == "2":
-        stop_instance()
-    elif choice == "3":
-        describe_instance()
-    elif choice == "4":
-        print("Exiting...")
-        exit()
-    else:
-        print("Invalid choice. Please try again.\n")
-        run_main_menu()
+            if stop_time <= start_time:
+                print("Stop time must be after start time. Try again.")
+                continue
+
+            return start_time, stop_time
+
+        except ValueError:
+            print("Invalid time format. Please enter the time in HH:MM:SS format.")
 
 # Function to start the EC2 instance
 def start_instance():

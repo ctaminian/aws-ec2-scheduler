@@ -18,19 +18,19 @@ ec2 = boto3.client("ec2", aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_ke
 print("EC2 client created successfully\n")
 
 def main():
-    start_time, stop_time = get_start_and_stop_times()
+    launch_time, termination_time = get_launch_and_termination_times()
     
-    wait_until_start_time(start_time, stop_time)
+    wait_until_launch_time(launch_time, termination_time)
 
-def wait_until_start_time(start_time, stop_time):
-    start_time = start_time.replace(microsecond=0)
+def wait_until_launch_time(launch_time, termination_time):
+    launch_time = launch_time.replace(microsecond=0)
 
-    print(f"Waiting until {start_time.strftime('%Y-%m-%d %H:%M:%S')} to launch your EC2 instance...\n")
+    print(f"Waiting until {launch_time.strftime('%Y-%m-%d %H:%M:%S')} to launch your EC2 instance...\n")
 
     now = datetime.now().replace(microsecond=0)
     
-    while datetime.now().replace(microsecond=0) < start_time:
-        time_remaining = (start_time - datetime.now()).total_seconds()
+    while datetime.now().replace(microsecond=0) < launch_time:
+        time_remaining = (launch_time - datetime.now()).total_seconds()
         print(f"Your EC2 instance is scheduled to launch in {int(time_remaining)} seconds...", end="\r")
         time.sleep(1)
 
@@ -38,22 +38,22 @@ def wait_until_start_time(start_time, stop_time):
     print("Proceeding to launch your EC2 instance...\n")
 
     # Launch the EC2 instance
-    launch_ec2_instance(stop_time)
+    launch_ec2_instance(termination_time)
 
-def launch_ec2_instance(stop_time):
+def launch_ec2_instance(termination_time):
     print("Launching EC2 instance...\n")
     
-    wait_until_stop_time(stop_time)
+    wait_until_termination_time(termination_time)
 
-def wait_until_stop_time(stop_time):
-    stop_time = stop_time.replace(microsecond=0)
+def wait_until_termination_time(termination_time):
+    termination_time = termination_time.replace(microsecond=0)
 
-    print(f"Waiting until {stop_time.strftime('%Y-%m-%d %H:%M:%S')} to terminate your EC2 instance...\n")
+    print(f"Waiting until {termination_time.strftime('%Y-%m-%d %H:%M:%S')} to terminate your EC2 instance...\n")
 
     now = datetime.now().replace(microsecond=0)
     
-    while datetime.now().replace(microsecond=0) < stop_time:
-        time_remaining = (stop_time - datetime.now()).total_seconds()
+    while datetime.now().replace(microsecond=0) < termination_time:
+        time_remaining = (termination_time - datetime.now()).total_seconds()
         print(f"Your EC2 instance is scheduled to terminate in {int(time_remaining)} seconds...", end="\r")
         time.sleep(1)
 
@@ -61,40 +61,40 @@ def wait_until_stop_time(stop_time):
     print("Proceeding to terminate your EC2 instance...\n")
 
 # Function to get and validate start and stop times
-def get_start_and_stop_times():
+def get_launch_and_termination_times():
     print("Welcome to the EC2 Scheduler!")
-    print("Please enter the start and stop times for the EC2 instance (HH:MM:SS format)\n")
+    print("Please enter the launch and termination times for the EC2 instance (HH:MM:SS format)\n")
 
     while True:
         try:
-            start_time_str = input("Start time (HH:MM:SS): ")
-            stop_time_str = input("Stop time (HH:MM:SS): ")
+            launch_time_str = input("Launch time (HH:MM:SS): ")
+            termination_time_str = input("Termination time (HH:MM:SS): ")
             print()
 
             now = datetime.now()
 
             # Parse input as today's date
-            start_time = datetime.strptime(start_time_str, "%H:%M:%S").replace(
+            launch_time = datetime.strptime(launch_time_str, "%H:%M:%S").replace(
                 year=now.year, month=now.month, day=now.day, microsecond=0
             )
-            stop_time = datetime.strptime(stop_time_str, "%H:%M:%S").replace(
+            termination_time = datetime.strptime(termination_time_str, "%H:%M:%S").replace(
                 year=now.year, month=now.month, day=now.day, microsecond=0
             )
 
             # Ensure AM/PM conversion aligns with system time
-            if start_time < now:
-                if now.hour >= 12 and start_time.hour < 12:
-                    start_time = start_time.replace(hour=start_time.hour + 12)
-                    stop_time = stop_time.replace(hour=stop_time.hour + 12)
+            if launch_time < now:
+                if now.hour >= 12 and launch_time.hour < 12:
+                    launch_time = launch_time.replace(hour=launch_time.hour + 12)
+                    termination_time = termination_time.replace(hour=termination_time.hour + 12)
                 else:
-                    start_time += timedelta(days=1)
-                    stop_time += timedelta(days=1)
+                    launch_time += timedelta(days=1)
+                    termination_time += timedelta(days=1)
                     
-            if stop_time <= start_time:
+            if termination_time <= launch_time:
                 print("Stop time must be after start time. Try again.")
                 continue
 
-            return start_time, stop_time
+            return launch_time, termination_time
 
         except ValueError:
             print("Invalid format! Please enter time in HH:MM:SS.")

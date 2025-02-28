@@ -18,30 +18,24 @@ ec2 = boto3.client("ec2", aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_ke
 print("EC2 client created successfully\n")
 
 def main():
-
-    # Get start and stop times from the user
     start_time, stop_time = get_start_and_stop_times()
-    print(f"\nStart time: {start_time.strftime('%Y-%m-%d %H:%M:%S')}, Stop time: {stop_time.strftime('%Y-%m-%d %H:%M:%S')}")
-
-    # Wait until start time
+    
     wait_until_start_time(start_time, stop_time)
 
 def wait_until_start_time(start_time, stop_time):
-    """Wait until the start time, showing a countdown."""
-    
     start_time = start_time.replace(microsecond=0)
 
-    print(f"Waiting until {start_time.strftime('%Y-%m-%d %H:%M:%S')}...\n")
+    print(f"Waiting until {start_time.strftime('%Y-%m-%d %H:%M:%S')} to launch your EC2 instance...\n")
 
     now = datetime.now().replace(microsecond=0)
     
     while datetime.now().replace(microsecond=0) < start_time:
         time_remaining = (start_time - datetime.now()).total_seconds()
-        print(f"Waiting for {int(time_remaining)} seconds...", end="\r")
+        print(f"Your EC2 instance is scheduled to launch in {int(time_remaining)} seconds...", end="\r")
         time.sleep(1)
 
     print("\n")
-    print("Start time reached! Proceeding to launch EC2 instance...\n")
+    print("Proceeding to launch your EC2 instance...\n")
 
     # Launch the EC2 instance
     launch_ec2_instance(stop_time)
@@ -54,15 +48,17 @@ def launch_ec2_instance(stop_time):
 def wait_until_stop_time(stop_time):
     stop_time = stop_time.replace(microsecond=0)
 
+    print(f"Waiting until {stop_time.strftime('%Y-%m-%d %H:%M:%S')} to terminate your EC2 instance...\n")
+
     now = datetime.now().replace(microsecond=0)
     
     while datetime.now().replace(microsecond=0) < stop_time:
         time_remaining = (stop_time - datetime.now()).total_seconds()
-        print(f"Waiting for {int(time_remaining)} seconds...", end="\r")
+        print(f"Your EC2 instance is scheduled to terminate in {int(time_remaining)} seconds...", end="\r")
         time.sleep(1)
 
     print("\n")
-    print("Stop time reached! Proceeding to terminate the EC2 instance...\n")
+    print("Proceeding to terminate your EC2 instance...\n")
 
 # Function to get and validate start and stop times
 def get_start_and_stop_times():
@@ -73,6 +69,7 @@ def get_start_and_stop_times():
         try:
             start_time_str = input("Start time (HH:MM:SS): ")
             stop_time_str = input("Stop time (HH:MM:SS): ")
+            print()
 
             now = datetime.now()
 
@@ -101,7 +98,6 @@ def get_start_and_stop_times():
 
         except ValueError:
             print("Invalid format! Please enter time in HH:MM:SS.")
-
 
 if __name__ == "__main__":
     main()

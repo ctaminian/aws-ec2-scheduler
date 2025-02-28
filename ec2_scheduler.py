@@ -91,7 +91,7 @@ def get_launch_and_termination_times():
                     termination_time += timedelta(days=1)
                     
             if termination_time <= launch_time:
-                print("Stop time must be after start time. Try again.")
+                print("Termination time must be after start time. Try again.")
                 continue
 
             return launch_time, termination_time

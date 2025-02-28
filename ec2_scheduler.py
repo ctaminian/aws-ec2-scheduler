@@ -16,6 +16,7 @@ EC2_INSTANCE_ID = os.getenv("EC2_INSTANCE_ID")
 # Create an EC2 client
 ec2 = boto3.client("ec2", aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY, region_name=AWS_REGION)
 print("EC2 client created successfully\n")
+print("Welcome to the EC2 Scheduler!")
 
 def main():
     launch_time, termination_time = get_launch_and_termination_times()
@@ -60,9 +61,14 @@ def wait_until_termination_time(termination_time):
     print("\n")
     print("Proceeding to terminate your EC2 instance...\n")
 
+    # Terminate the EC2 instance
+    terminate_ec2_instance()
+
+def terminate_ec2_instance():
+    print("Terminating EC2 instance...\n")
+
 # Function to get and validate start and stop times
 def get_launch_and_termination_times():
-    print("Welcome to the EC2 Scheduler!")
     print("Please enter the launch and termination times for the EC2 instance (HH:MM:SS format)\n")
 
     while True:

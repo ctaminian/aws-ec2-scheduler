@@ -70,7 +70,7 @@ def launch_ec2_instance(termination_time):
                 env_file.write(line)
 
         if not key_found:
-            env_file.write(f"EC2_INSTANCE_ID={EC2_INSTANCE_ID}\n")
+            env_file.write(f"\nEC2_INSTANCE_ID={EC2_INSTANCE_ID}\n")
 
     wait_until_termination_time(termination_time)
 

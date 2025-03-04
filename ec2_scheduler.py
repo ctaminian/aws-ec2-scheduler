@@ -7,11 +7,14 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve AWS credentials, region, and EC2 instance ID from environment variables
+# Retrieve AWS credentials, region, and EC2 AMI ID and Security Group ID from environment variables
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION")
-EC2_INSTANCE_ID = os.getenv("EC2_INSTANCE_ID")
+AMI_ID = os.getenv("AMI_ID")
+SECURITY_GROUP_ID = os.getenv("SECURITY_GROUP_ID")
+INSTANCE_TYPE = os.getenv("INSTANCE_TYPE")
+EC2_INSTANCE_ID = None
 
 # Create an EC2 client
 ec2 = boto3.client("ec2", aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY, region_name=AWS_REGION)
@@ -43,6 +46,32 @@ def wait_until_launch_time(launch_time, termination_time):
 def launch_ec2_instance(termination_time):
     print("Launching EC2 instance...\n")
     
+    response = ec2.run_instances(ImageId=AMI_ID, InstanceType=INSTANCE_TYPE, MinCount=1, MaxCount=1, SecurityGroupIds=[SECURITY_GROUP_ID])
+
+    global EC2_INSTANCE_ID
+    EC2_INSTANCE_ID = response["Instances"][0]["InstanceId"]
+    print(f"EC2 Instance Launched: {EC2_INSTANCE_ID}")
+
+    ec2.get_waiter("instance_running").wait(InstanceIds=[EC2_INSTANCE_ID])
+    print(f"EC2 instance {EC2_INSTANCE_ID} is now running.\n")
+
+    env_path = ".env"
+
+    with open(".env", "r") as env_file:
+        lines = env_file.readlines()
+
+    key_found = False
+    with open(".env", "w") as env_file:
+        for line in lines:
+            if line.startswith("EC2_INSTANCE_ID="):
+                env_file.write(f"EC2_INSTANCE_ID={EC2_INSTANCE_ID}\n")
+                key_found = True
+            else:
+                env_file.write(line)
+
+        if not key_found:
+            env_file.write(f"EC2_INSTANCE_ID={EC2_INSTANCE_ID}\n")
+
     wait_until_termination_time(termination_time)
 
 def wait_until_termination_time(termination_time):

@@ -49,6 +49,7 @@ def launch_ec2_instance(termination_time):
     response = ec2.run_instances(ImageId=AMI_ID, InstanceType=INSTANCE_TYPE, MinCount=1, MaxCount=1, SecurityGroupIds=[SECURITY_GROUP_ID])
 
     global EC2_INSTANCE_ID
+
     EC2_INSTANCE_ID = response["Instances"][0]["InstanceId"]
     print(f"EC2 Instance Launched: {EC2_INSTANCE_ID}")
 
@@ -93,7 +94,29 @@ def wait_until_termination_time(termination_time):
     terminate_ec2_instance()
 
 def terminate_ec2_instance():
-    print("Terminating EC2 instance...\n")
+
+    global EC2_INSTANCE_ID
+
+    if not EC2_INSTANCE_ID:
+        print("No running EC2 instance to terminate.")
+        return
+
+    print(f"Terminating EC2 instance {EC2_INSTANCE_ID}...\n")
+    ec2.terminate_instances(InstanceIds=[EC2_INSTANCE_ID])
+    
+    ec2.get_waiter("instance_terminated").wait(InstanceIds=[EC2_INSTANCE_ID])
+    print(f"EC2 instance {EC2_INSTANCE_ID} has been terminated.\n")
+
+    # Update .env file to remove EC2_INSTANCE_ID
+    with open(".env", "r") as env_file:
+        lines = env_file.readlines()
+
+    with open(".env", "w") as env_file:
+        for line in lines:
+            if not line.startswith("EC2_INSTANCE_ID="):
+                env_file.write(line)
+
+    EC2_INSTANCE_ID = None
 
 # Function to get and validate start and stop times
 def get_launch_and_termination_times():

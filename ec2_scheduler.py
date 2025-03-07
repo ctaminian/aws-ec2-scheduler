@@ -3,18 +3,19 @@ import boto3
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import fileinput
+import botocore.exceptions
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve AWS credentials, region, and EC2 AMI ID and Security Group ID from environment variables
+# Retrieve AWS credentials and settings from environment variables
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION")
 AMI_ID = os.getenv("AMI_ID")
 SECURITY_GROUP_ID = os.getenv("SECURITY_GROUP_ID")
 INSTANCE_TYPE = os.getenv("INSTANCE_TYPE")
-EC2_INSTANCE_ID = None
 
 # Create an EC2 client
 ec2 = boto3.client("ec2", aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY, region_name=AWS_REGION)
@@ -30,96 +31,77 @@ def wait_until_launch_time(launch_time, termination_time):
 
     print(f"Waiting until {launch_time.strftime('%Y-%m-%d %H:%M:%S')} to launch your EC2 instance...\n")
 
-    now = datetime.now().replace(microsecond=0)
-    
     while datetime.now().replace(microsecond=0) < launch_time:
         time_remaining = (launch_time - datetime.now()).total_seconds()
         print(f"Your EC2 instance is scheduled to launch in {int(time_remaining)} seconds...", end="\r")
         time.sleep(1)
 
-    print("\n")
-    print("Proceeding to launch your EC2 instance...\n")
-
-    # Launch the EC2 instance
-    launch_ec2_instance(termination_time)
-
-def launch_ec2_instance(termination_time):
-    print("Launching EC2 instance...\n")
+    print("\nProceeding to launch your EC2 instance...\n")
+    instance_id = launch_ec2_instance()
     
-    response = ec2.run_instances(ImageId=AMI_ID, InstanceType=INSTANCE_TYPE, MinCount=1, MaxCount=1, SecurityGroupIds=[SECURITY_GROUP_ID])
+    if instance_id:
+        wait_until_termination_time(instance_id, termination_time)
 
-    global EC2_INSTANCE_ID
+def launch_ec2_instance():
+    print("Launching EC2 instance...\n")
 
-    EC2_INSTANCE_ID = response["Instances"][0]["InstanceId"]
-    print(f"EC2 Instance Launched: {EC2_INSTANCE_ID}")
+    try:
+        response = ec2.run_instances(ImageId=AMI_ID, InstanceType=INSTANCE_TYPE, MinCount=1, MaxCount=1, SecurityGroupIds=[SECURITY_GROUP_ID])
+        instance_id = response["Instances"][0]["InstanceId"]
+        print(f"EC2 Instance Launched: {instance_id}")
 
-    ec2.get_waiter("instance_running").wait(InstanceIds=[EC2_INSTANCE_ID])
-    print(f"EC2 instance {EC2_INSTANCE_ID} is now running.\n")
+        ec2.get_waiter("instance_running").wait(InstanceIds=[instance_id])
+        print(f"EC2 instance {instance_id} is now running.\n")
 
-    add_instance_id_to_env_file(EC2_INSTANCE_ID)
+        update_env_file("EC2_INSTANCE_ID", instance_id)
+        return instance_id
 
-    wait_until_termination_time(termination_time)
+    except botocore.exceptions.ClientError as e:
+        print(f"Error launching EC2 instance: {e}")
+        return None
 
-def add_instance_id_to_env_file(EC2_INSTANCE_ID):
-    with open(".env", "r") as env_file:
-        lines = env_file.readlines()
-
-    key_found = False
-    with open(".env", "w") as env_file:
-        for line in lines:
-            if line.startswith("EC2_INSTANCE_ID="):
-                env_file.write(f"EC2_INSTANCE_ID={EC2_INSTANCE_ID}\n")
-                key_found = True
-            else:
-                env_file.write(line)
-
-        if not key_found:
-            env_file.write(f"\nEC2_INSTANCE_ID={EC2_INSTANCE_ID}\n")
-
-def wait_until_termination_time(termination_time):
+def wait_until_termination_time(instance_id, termination_time):
     termination_time = termination_time.replace(microsecond=0)
 
     print(f"Waiting until {termination_time.strftime('%Y-%m-%d %H:%M:%S')} to terminate your EC2 instance...\n")
 
-    now = datetime.now().replace(microsecond=0)
-    
     while datetime.now().replace(microsecond=0) < termination_time:
         time_remaining = (termination_time - datetime.now()).total_seconds()
         print(f"Your EC2 instance is scheduled to terminate in {int(time_remaining)} seconds...", end="\r")
         time.sleep(1)
 
-    print("\n")
-    print("Proceeding to terminate your EC2 instance...\n")
+    print("\nProceeding to terminate your EC2 instance...\n")
+    terminate_ec2_instance(instance_id)
 
-    # Terminate the EC2 instance
-    terminate_ec2_instance()
-
-def terminate_ec2_instance():
-
-    global EC2_INSTANCE_ID
-
-    if not EC2_INSTANCE_ID:
+def terminate_ec2_instance(instance_id):
+    if not instance_id:
         print("No running EC2 instance to terminate.")
         return
 
-    print(f"Terminating EC2 instance {EC2_INSTANCE_ID}...\n")
-    ec2.terminate_instances(InstanceIds=[EC2_INSTANCE_ID])
-    
-    ec2.get_waiter("instance_terminated").wait(InstanceIds=[EC2_INSTANCE_ID])
-    print(f"EC2 instance {EC2_INSTANCE_ID} has been terminated.\n")
+    try:
+        print(f"Terminating EC2 instance {instance_id}...\n")
+        ec2.terminate_instances(InstanceIds=[instance_id])
 
-    remove_instance_id_from_env_file()
+        ec2.get_waiter("instance_terminated").wait(InstanceIds=[instance_id])
+        print(f"EC2 instance {instance_id} has been terminated.\n")
 
-    EC2_INSTANCE_ID = None
+        update_env_file("EC2_INSTANCE_ID", "")
+    except botocore.exceptions.ClientError as e:
+        print(f"Error terminating EC2 instance: {e}")
 
-def remove_instance_id_from_env_file():
-    with open(".env", "r") as env_file:
-        lines = env_file.readlines()
+def update_env_file(key, value):
+    updated = False
+    with fileinput.input(".env", inplace=True) as file:
+        for line in file:
+            if line.startswith(f"{key}="):
+                print(f"{key}={value}")
+                updated = True
+            else:
+                print(line, end="")
 
-    with open(".env", "w") as env_file:
-        for line in lines:
-            if not line.startswith("EC2_INSTANCE_ID="):
-                env_file.write(line)
+    if not updated:
+        with open(".env", "a") as env_file:
+            env_file.write(f"\n{key}={value}\n")
 
 # Function to get and validate start and stop times
 def get_launch_and_termination_times():

@@ -56,8 +56,11 @@ def launch_ec2_instance(termination_time):
     ec2.get_waiter("instance_running").wait(InstanceIds=[EC2_INSTANCE_ID])
     print(f"EC2 instance {EC2_INSTANCE_ID} is now running.\n")
 
-    env_path = ".env"
+    add_instance_id_to_env_file(EC2_INSTANCE_ID)
 
+    wait_until_termination_time(termination_time)
+
+def add_instance_id_to_env_file(EC2_INSTANCE_ID):
     with open(".env", "r") as env_file:
         lines = env_file.readlines()
 
@@ -72,8 +75,6 @@ def launch_ec2_instance(termination_time):
 
         if not key_found:
             env_file.write(f"\nEC2_INSTANCE_ID={EC2_INSTANCE_ID}\n")
-
-    wait_until_termination_time(termination_time)
 
 def wait_until_termination_time(termination_time):
     termination_time = termination_time.replace(microsecond=0)
@@ -107,7 +108,11 @@ def terminate_ec2_instance():
     ec2.get_waiter("instance_terminated").wait(InstanceIds=[EC2_INSTANCE_ID])
     print(f"EC2 instance {EC2_INSTANCE_ID} has been terminated.\n")
 
-    # Update .env file to remove EC2_INSTANCE_ID
+    remove_instance_id_from_env_file()
+
+    EC2_INSTANCE_ID = None
+
+def remove_instance_id_from_env_file():
     with open(".env", "r") as env_file:
         lines = env_file.readlines()
 
@@ -115,8 +120,6 @@ def terminate_ec2_instance():
         for line in lines:
             if not line.startswith("EC2_INSTANCE_ID="):
                 env_file.write(line)
-
-    EC2_INSTANCE_ID = None
 
 # Function to get and validate start and stop times
 def get_launch_and_termination_times():
